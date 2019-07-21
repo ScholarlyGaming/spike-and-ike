@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Making your first Phaser 3 Game - Part 1</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+    var score = 0;
+	var stopAll = false; //Used for stopping movement of enemies
+    var scoreText;
+    var camera;
+    var attacking = 0;
+    var combo = 0;
+    var moving = false;
+    var facing = 1;
+    var musicB, death, draw, swing, jump;
+    var musicLooperM = 561;
+    var musicLoop = musicLooperM;
+    // var top = 0;
+    // var left = 0;
+    // var width = 800;
+    // var height = 600;
+	
+	//Phaser 3.18
+	//"https://cdn.jsdelivr.net/npm/phaser@3.18.1/dist/phaser-arcade-physics.min.js"
+	
+	//Phaser 3.11
+	//"//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 600 },
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        },
+		audio: {
+			disableWebAudio: true
+		}
+    };
+
+    var game = new Phaser.Game(config);
+
+    function preload ()
+    {
+        //Audio
+        this.load.audio('theme', ['POL-gold-gryphons-short.wav']);
+        //Background music by PlayOnLoop.com; Licensed under Creative Commons by Attribution 4.0
+        this.load.audio('draw', ['draw.mp3']);
+        this.load.audio('swing', ['swing.mp3']);
+        this.load.audio('death', ['death.mp3']);
+        this.load.audio('jump', ['jump.mp3']);
+        this.load.audio('money', ['money.mp3']);
+	
+		this.load.image('background', 'mountains.png');
+		//this.load.image('ground', 'assets/platform.png');
+        this.load.image('ground', 'ground.png');
+        //this.load.image('star', 'assets/star.png');
+        this.load.image('topLeft', 'topLeft.png');
+        this.load.image('topMiddle', 'topMiddle.png');
+        this.load.image('topRight', 'topRight.png');
+        this.load.image('middleLeft', 'middleLeft.png');
+        this.load.image('middle', 'middle.png');
+        this.load.image('middleRight', 'middleRight.png');
+        this.load.image('bottomLeft', 'bottomLeft.png');
+        this.load.image('bottomMiddle', 'bottomMiddle.png');
+        this.load.image('bottomRight', 'bottomRight.png');
+        this.load.image('coin', 'coin.png');
+        this.load.image('crate', 'crate.png');
+        this.load.image('spike', 'spike.png');
+        this.load.image('arrowRight', 'arrow.png');
+        this.load.image('jump', 'jump.png');
+        this.load.image('logo', 'logo2.png');
+        this.load.spritesheet('ike',
+            'ikeSheet2.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+		this.load.spritesheet('attackChop',
+            'attack0.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+		this.load.spritesheet('attackSwirl',
+            'attack1.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+		this.load.spritesheet('attacks',
+            'attackSeq2.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+		this.load.spritesheet('attacksR',
+            'revAttacks.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+		//Creates enemy spreadsheet. Might want to change this.
+		this.load.spritesheet('dwarfLeft', 'dwarfLeft.png',
+			{ frameWidth: 64, frameHeight: 48 }
+		);
+        this.load.spritesheet('dwarfRight', 'dwarfRight.png',
+            { frameWidth: 64, frameHeight: 48 }
+        );
+        this.load.spritesheet('ikeJump', 'jump.png',
+            { frameWidth: 100, frameHeight: 74 }
+        );
+    }
+
+    function create ()
+    {
+        //Music
+        musicB = this.sound.add('theme');
+        musicB.volume = 0.35;
+        musicB.play();
+
+        draw = this.sound.add('draw');
+        swing = this.sound.add('swing');
+        death = this.sound.add('death');
+        jump = this.sound.add('jump');
+        money = this.sound.add('money');
+        for(var i = 0; i <= 45; i++)
+		{
+			
+			this.add.image(800*i, 0, 'background').setOrigin(0, 0);
+        }
+		//this.add.image(0, 0, 'star');
+
+        platforms = this.physics.add.staticGroup();
+        platforms.create(0 + 8, 568 + 8, 'topLeft');
+        platforms.create(0 + 8, 584 + 8, 'middleLeft');
+        for (var i =0; i < 180; i++) {
+            if (i == 74 || i == 75 || i == 76 || i == 77 || i == 78 || i == 79 || i == 80 || i == 81 || i == 82 || i == 83 || i == 84) {
+            }
+            else if (i == 73) {
+                platforms.create((16 * (i + 1)) + 8, 568 + 8, 'topRight');
+                platforms.create((16 * (i + 1)) + 8, 584 + 8, 'middleRight');
+            }
+            else if (i == 85) {
+                platforms.create((16 * (i + 1)) + 8, 568 + 8, 'topLeft');
+                platforms.create((16 * (i + 1)) + 8, 584 + 8, 'middleLeft');
+            }
+            else {
+                platforms.create((16 * (i + 1)) + 8, 568 + 8, 'topMiddle');
+                platforms.create((16 * (i + 1)) + 8, 584 + 8, 'middle');
+            }
+            if (i == 179) {
+                platforms.create(((16 * (i + 2)) - 1) + 8, 568 + 8, 'topRight');
+                platforms.create(((16 * (i + 2)) - 1) + 8, 584 + 8, 'middleRight');
+            }
+        }
+        platforms.create(1630 + 8, 552 + 8, 'topLeft');
+        platforms.create(1630 + 8, 568 + 8, 'middle');
+        platforms.create(1646 + 8, 568 + 8, 'middle');
+        platforms.create(1662 + 8, 568 + 8, 'middle');
+        platforms.create(1678 + 8, 568 + 8, 'middle');
+        platforms.create(1694 + 8, 568 + 8, 'middle');
+        platforms.create(1710 + 8, 568 + 8, 'middle');
+        platforms.create(1726 + 8, 568 + 8, 'middle');
+        platforms.create(1742 + 8, 568 + 8, 'middle');
+        for (var i = 1; i < 11; i++) {
+            platforms.create(1742 + (16 * i) + 8, 568 + 8, 'middle');
+            platforms.create(1742 + (16 * i) + 8, 552 + 8, 'middle');
+            platforms.create(1742 + (16 * i) + 8, 536 + 8, 'topMiddle');
+            if (i == 10) {
+                platforms.create(1742 + (16 * i) + 8, 536 + 8, 'topRight');
+                platforms.create(1742 + (16 * i) + 8, 552 + 8, 'middleRight');
+            }
+        }
+        //platforms.create(1726, 568, 'middle');
+
+        platforms.create(1646 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1662 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1678 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1694 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1710 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1726 + 8, 552 + 8, 'topMiddle');
+        platforms.create(1742 + 8, 552 + 8, 'middle');
+        platforms.create(1742 + 8, 536 + 8, 'topLeft');
+
+        platforms.create(3000 + 8, 456 + 8, 'topLeft');
+        platforms.create(3000 + 8, 472 + 8, 'bottomLeft');
+        for (var i = 1; i < 11; i++) {
+            platforms.create((3000 + (16 * i)) + 8, 456 + 8, 'topMiddle');
+            platforms.create((3000+ (16 * i)) + 8, 472 + 8, 'bottomMiddle');
+            if (i == 10) {
+                platforms.create((3000 + (16 * i)) + 8, 456 + 8, 'topRight');
+                platforms.create((3000 + (16 * i)) + 8, 472 + 8, 'bottomRight');
+            }
+        }
+
+        platforms.create(3270 + 8, 360 + 8, 'topLeft');
+        platforms.create(3270 + 8, 376 + 8, 'bottomLeft');
+        for (var i = 1; i < 11; i++) {
+            platforms.create((3270 + (16 * i)) + 8, 360 + 8, 'topMiddle');
+            platforms.create((3270+ (16 * i)) + 8, 376 + 8, 'bottomMiddle');
+            if (i == 10) {
+                platforms.create((3270 + (16 * i)) + 8, 360 + 8, 'topRight');
+                platforms.create((3270 + (16 * i)) + 8, 376 + 8, 'bottomRight');
+            }
+        }
+
+        platforms.create(3800 + 8, 328 + 8, 'topLeft');
+        platforms.create(3800 + 8, 344 + 8, 'bottomLeft');
+        for (var i = 1; i < 11; i++) {
+            platforms.create((3800 + (16 * i)) + 8, 328 + 8, 'topMiddle');
+            platforms.create((3800+ (16 * i)) + 8, 344 + 8, 'bottomMiddle');
+            if (i == 10) {
+                platforms.create((3800 + (16 * i)) + 8, 328 + 8, 'topRight');
+                platforms.create((3800 + (16 * i)) + 8, 344 + 8, 'bottomRight');
+            }
+        }
+
+        player = this.physics.add.sprite(100, 450, 'ike');// 100,450
+
+        player.setBounce(0.01);
+        this.cameras.main.setBounds(0,0,100000, 600);
+        this.cameras.main.startFollow(player);
+
+        this.anims.create({
+            key: 'left',
+            frames: this.anims.generateFrameNumbers('ike', { start: 0, end: 5 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'turnL',
+            frames: this.anims.generateFrameNumbers('ike', { start: 9, end: 6 }),
+            frameRate: 3,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'turnR',
+            frames: this.anims.generateFrameNumbers('ike', { start: 6, end: 9 }),
+            frameRate: 3,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'right',
+            frames: this.anims.generateFrameNumbers('ike', { start: 10, end: 15 }),
+            frameRate: 10,
+            repeat: -1
+        });
+		this.anims.create({
+			key: 'attackSeq',
+			frames: this.anims.generateFrameNumbers('attacks', {start: 0, end: 9}),
+			frameRate: 10,
+			repeat: 0
+		});
+		this.anims.create({
+			key: 'attackSeqR',
+			frames: this.anims.generateFrameNumbers('attacksR', {start: 9, end: 0}),
+			frameRate: 10,
+			repeat: 0
+		});
+
+        this.anims.create({
+            key: 'jumping',
+            frames: [ { key: 'ikeJump', frame: 0 } ],
+            frameRate: 20
+        });
+		
+        cursors = this.input.keyboard.createCursorKeys();
+
+        this.physics.add.collider(player, platforms);
+
+        coins = this.physics.add.group({
+            //key: 'coin',
+            // repeat: 11,
+            // setXY: { x: 12, y: 0, stepX: 70 }
+        });
+
+        coins.children.iterate(function (child) {
+            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+        });
+        this.physics.add.collider(coins, platforms);
+        this.physics.add.overlap(player, coins, collectCoin, null, this);
+
+        scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' }).setScrollFactor(0);
+        this.add.text(400, 16, 'Use ← and → to move', { fontSize: '16px', fill: '#000' });
+        this.add.image(600, 300, 'logo');
+        this.add.text(1230, 500, 'Jump using ↑', { fontSize: '16px', fill: '#000' });
+        this.add.text(1920, 500, 'Avoid Spikes!', { fontSize: '16px', fill: '#000' });
+        this.add.text(2340, 440, 'Press Space to Attack', { fontSize: '16px', fill: '#000' });
+        //this.add.image(100,100).setOrigin(0,0, 'arrowRight');
+
+        spikes = this.physics.add.group({
+            key: 'spike'
+            // repeat: 1,
+            // setXY: { x: 12, y: 0, stepX: 70 }
+
+        });
+
+        spikes.children.iterate(function (child) {
+            child.setBounceY(0);
+
+        });
+        this.physics.add.collider(spikes, platforms);
+        this.physics.add.overlap(player, spikes, death, null, this);
+
+        spikes.create(1918 , 548, 'spike').setOrigin(0,0);
+        spikes.create(1957 , 548, 'spike').setOrigin(0,0);
+        spikes.create(1996 , 548, 'spike').setOrigin(0,0);
+
+        falling = this.physics.add.group({
+            key: 'crate',
+            setXY: {x: 3600, y: 250},
+            allowGravity: false,
+            immovable: true
+        });
+
+        this.physics.add.collider(player, falling, triggerFall, null, this);
+
+        bombs = this.physics.add.group();
+
+        this.physics.add.collider(bombs, platforms);
+
+        this.physics.add.collider(player, bombs, death, null, this);
+		
+		//Enemy creation
+		this.enemies = this.add.group();
+        this.enemies.create(2450, 545, 'dwarf');
+		// this.enemies.create(760, 190, 'dwarf');
+		// this.enemies.create(540, 370, 'dwarf');
+		
+		var j = 0;
+		let rangeA = [120, 150, 280];
+		let speedA = [1, 1.5, 1.5];
+		Phaser.Actions.Call(this.enemies.getChildren(), function(enemy) {
+			enemy.speed = speedA[j];
+			enemy.enemyMaxX = enemy.x + rangeA[j]/2;
+			enemy.enemyMinX = enemy.x - rangeA[j]/2;
+			j++;
+		}, this);
+		
+		//Enemy left animation
+		this.anims.create({
+			key: 'enemy_left',
+			frames: this.anims.generateFrameNumbers('dwarfRight', { start: 2, end: 9 }),
+			frameRate: 10,
+			repeat: -1
+		});
+
+		//Enemy stationary
+		this.anims.create({
+			// key: 'enemy_turn',
+			// frames: this.anims.generateFrameNumbers('dwarf', { start: 10, end: 14 }),
+			// frameRate: 10,
+			// repeat: -1
+		});
+
+		//Enemy right animation
+		this.anims.create({
+			key: 'enemy_right',
+			frames: this.anims.generateFrameNumbers('dwarfLeft', { start: 0, end: 7 }),
+			frameRate: 10,
+			repeat: -1
+		});
+    }
+
+    function triggerFall (player, fall)
+    {
+        fall.setVelocity(0, 40);
+    }
+
+    function collectCoin (player, coin)
+    {
+        coin.disableBody(true, true);
+
+        score += 10;
+        scoreText.setText('Score: ' + score);
+
+
+        money.play();
+
+        if (coins.countActive(true) === 0)
+        {
+            coins.children.iterate(function (child) {
+
+                child.enableBody(true, child.x, 0, true, true);
+
+            });
+
+            var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+            var bomb = bombs.create(x, 16, 'bomb');
+            bomb.setBounce(1);
+            bomb.setCollideWorldBounds(true);
+            bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+
+        }
+    }
+
+    function death (player, bomb) {
+        this.physics.pause();
+
+        player.setTint(0xff0000);
+
+        player.anims.play('turnR');
+
+        stopAll = true;
+
+        gameOver = true;
+
+        death.play();
+    }
+
+    function update ()
+    {
+
+        if(player.x > 4000 && player.y < 600){scoreText.setText('You Win!')}
+
+        //scoreText.setXY((camera.main.x + 16), (camera.main.y + 16));
+		//Enemy movement
+		let enemies = this.enemies.getChildren();
+		let numEnemies = enemies.length;
+ 
+		for (let i = 0; i < numEnemies; i++) {
+ 
+			// move enemies
+			if(!stopAll){
+				enemies[i].x += enemies[i].speed;
+				if(enemies[i].speed > 0){
+					enemies[i].anims.play('enemy_right', true);
+				}
+				else if(enemies[i].speed < 0){
+					enemies[i].anims.play('enemy_left', true);
+				}
+				else{
+					enemies[i].anims.play('enemy_turn', true);
+				}
+			}
+			else{
+				enemies[i].anims.play('enemy_turn', true);
+			}
+ 
+			// reverse movement if reached the edges
+			if (enemies[i].x >= enemies[i].enemyMaxX && enemies[i].speed > 0) {
+				enemies[i].speed *= -1;
+			} else if (enemies[i].x <= enemies[i].enemyMinX && enemies[i].speed < 0) {
+				enemies[i].speed *= -1;
+			}
+			
+			if (Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), enemies[i].getBounds())) {
+				//if(attacking > 0 && ((player.x < enemies[i].x && enemies[i].speed > 0) || (player.x > enemies[i].x && enemies[i].speed < 0))){
+				//Use above line for enemies that can only be hit from behind.
+				if(attacking > 20 && attacking < 40){
+					enemies[i].destroy();
+					numEnemies--;
+					score += 25;
+					scoreText.setText('Score: ' + score);
+				}
+				else{
+					this.physics.pause();
+
+					player.setTint(0xff0000);
+
+					player.anims.play('turnR');
+				
+					stopAll = true;
+
+					gameOver = true;
+					
+					//musicB.stop();
+					
+					//death.play();
+				}
+			}
+		}
+
+		moving = true;
+        if (cursors.left.isDown && attacking <= 0)
+        {
+            player.setVelocityX(-160);//160
+
+            if (player.body.touching.down) {
+                player.anims.play('left', true);
+            }
+			
+			facing = -1;
+        }
+        else if (cursors.right.isDown && attacking <= 0)
+        {
+            player.setVelocityX(160);//160
+
+            if (player.body.touching.down) {
+                player.anims.play('right', true);
+            }
+			
+			facing = 1;
+        }
+        else
+        {
+			moving = false;
+		
+            player.setVelocityX(0);
+
+            if(attacking <= 0){
+                if(facing == -1){
+                    player.anims.play('turnL', true);
+                }
+                else{
+                    player.anims.play('turnR', true);
+                }
+            }
+        }
+
+        if (cursors.up.isDown && player.body.touching.down)
+        {
+            player.setVelocityY(-400);
+            player.anims.play('jumping');
+        }
+
+        //Attacking: Change the two numbers below for timings.
+        if((attacking >= 36 && combo == 1) || (attacking >= 30 && combo == 0)){
+            if(cursors.down.isDown && player.body.touching.down && !stopAll && combo == 0){
+                attacking = 0;
+                //swing.play();
+                combo = 1;
+            }
+            else{
+                attacking = -50;
+                combo = 0;
+                if(facing == -1){
+                    player.anims.play('left');
+                }
+                else{
+                    player.anims.play('right');
+                }
+            }
+        }
+		if(attacking != 0){
+			attacking++;
+		}
+		else if(!stopAll){
+			combo = 0;
+		}
+		/**
+		if(combo == 0 && attacking != 0){
+			player.anims.play('swirl');
+		}
+		if(combo == 1 && attacking != 0){
+			player.anims.play('chop');
+		}
+		**/
+		if (!moving && cursors.down.isDown && attacking == 0 && player.body.touching.down && !stopAll){
+			attacking+=10;
+			//draw.play();
+		}
+		if (stopAll){
+			player.setTint(0xff0000);
+		}
+		if(attacking > 0){
+			if(facing == 1){
+				player.anims.play('attackSeq', true);
+			}
+			else{
+				player.anims.play('attackSeqR', true);
+			}
+		}
+        if(attacking == 13){
+            swing.play();
+        }
+
+        musicLoop--;
+        if(musicLoop <= 0){
+            musicB.play();
+            musicLoop = musicLooperM;
+        }
+    }
+
+</script>
+
+</body>
+</html>
